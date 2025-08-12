@@ -57,29 +57,5 @@ The AI will judge a chess position based on features (attributes) like:
 
 ♜ Rook activity – Are rooks on open or semi-open files?
 
-⚖️ Game phase – Opening, middlegame, or endgame (affects how above features are weighed).Attributes used for AI judgment (evaluation model):
-The AI will judge a chess position based on features (attributes) like:
-
-♟️ Material balance – Total value of pieces on each side (e.g., pawn = 1, queen = 9).
-
-🏰 King safety – Whether the king is well protected or exposed.
-
-🔄 Mobility – Number of legal moves available (activity of pieces).
-
-💣 Threats – Are pieces attacking valuable opponent pieces?
-
-🧱 Pawn structure – Doubled, isolated, or passed pawns.
-
-📏 Piece positioning – How well centralized or active the pieces are.
-
-🔗 Control of center – Who controls important squares like e4, d4, e5, d5.
-
-🕳️ Weak squares – Are there holes in the opponent’s position?
-
-♜ Rook activity – Are rooks on open or semi-open files?
-
 ⚖️ Game phase – Opening, middlegame, or endgame (affects how above features are weighed).
-
-
-
    
