@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - Chess AI Platform</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="header">
+        <div class="nav-container">
+            <div class="logo-section">
+                <div class="logo"><i class="fas fa-users"></i></div>
+                <div class="nav-title">User Management</div>
+            </div>
+            <div class="nav-links">
+                <a href="/"><i class="fas fa-home"></i> Home</a>
+                <a href="/analytics"><i class="fas fa-chart-pie"></i> Analytics</a>
+                <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="page-header">
+            <h1><i class="fas fa-users"></i> User Management</h1>
+            <p>Manage platform users, view statistics, and control access</p>
+        </div>
+
+        <div id="alert" class="alert"></div>
+
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="openAddUserModal()"><i class="fas fa-user-plus"></i> Add New User</button>
+        </div>
+        <div class="glass-panel users-table-container">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Password</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Games</th>
+                        <th>Win Rate</th>
+                        <th>Rating</th>
+                        <th>Created</th>
+                        <th>Last Login</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td><strong>{{ user.username }}</strong></td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            <div style="font-family: monospace; font-size: 10px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" 
+                                 title="{{ user.password_hash }}">
+                                {{ user.password_hash[:25] }}...
+                            </div>
+                            <button class="btn btn-primary" style="margin-top: 5px; font-size: 11px; padding: 4px 8px;" 
+                                    onclick="copyToClipboard('{{ user.password_hash }}', 'Password hash')">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </td>
+                        <td><span class="role-badge role-{{ user.role }}">{{ user.role|upper }}</span></td>
+                        <td>
+                            <span class="status-badge status-{{ 'active' if user.is_active else 'inactive' }}">
+                                {{ 'Active' if user.is_active else 'Inactive' }}
+                            </span>
+                        </td>
+                        <td>{{ user.games_played }}</td>
+                        <td>{{ ((user.wins / user.games_played * 100) if user.games_played > 0 else 0)|round(1) }}%</td>
+                        <td>{{ user.rating }}</td>
+                        <td>{{ user.created_at[:10] if user.created_at else 'N/A' }}</td>
+                        <td>{{ user.last_login[:10] if user.last_login else 'Never' }}</td>
+                        <td>
+                            <div style="display: flex; gap: 0.5rem; justify-content: flex-start;">
+                                <a href="/admin/users/{{ user.id }}/view" target="_blank" class="btn btn-primary btn-icon" title="View Stats"><i class="fas fa-eye"></i></a>
+                                <button class="btn btn-primary btn-icon" onclick="openResetPasswordModal({{ user.id }}, '{{ user.username }}')" title="Reset Password"><i class="fas fa-key"></i></button>
+                                {% if user.is_active %}
+                                <button class="btn btn-danger btn-icon" onclick="deleteUser({{ user.id }}, '{{ user.username }}')" title="Delete User"><i class="fas fa-trash"></i></button>
+                                {% else %}
+                                <button class="btn btn-primary btn-icon" onclick="activateUser({{ user.id }}, '{{ user.username }}')" title="Activate User"><i class="fas fa-check"></i></button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div id="addUserModal" class="modal">
+        <div class="glass-panel modal-content">
+            <div class="modal-header">
+                <span class="close" onclick="closeAddUserModal()">&times;</span>
+                <h2><i class="fas fa-user-plus"></i> Add New User</h2>
+            </div>
+            <form id="addUserForm">
+                <div class="form-group">
+                    <label>Username:</label>
+                    <input type="text" id="newUsername" required>
+                </div>
+                <div class="form-group">
+                    <label>Email:</label>
+                    <input type="email" id="newEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Password:</label>
+                    <input type="password" id="newPassword" required>
+                </div>
+                <div class="form-group">
+                    <label>Role:</label>
+                    <select id="newRole">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-danger" onclick="closeAddUserModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Stats Modal -->
+    <div id="statsModal" class="modal">
+        <div class="glass-panel modal-content">
+            <div class="modal-header">
+                <span class="close" onclick="closeStatsModal()">&times;</span>
+                <h2><i class="fas fa-chart-bar"></i> User Statistics</h2>
+            </div>
+            <div id="statsContent"></div>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div id="resetPasswordModal" class="modal">
+        <div class="glass-panel modal-content">
+            <div class="modal-header">
+                <span class="close" onclick="closeResetPasswordModal()">&times;</span>
+                <h2><i class="fas fa-key"></i> Reset Password</h2>
+            </div>
+            <form id="resetPasswordForm">
+                <input type="hidden" id="resetUserId">
+                <div class="form-group">
+                    <label>New Password for <span id="resetUsername"></span>:</label>
+                    <input type="password" id="resetPassword" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-danger" onclick="closeResetPasswordModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Reset Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alert.style.display = 'block';
+            setTimeout(() => { alert.style.display = 'none'; }, 5000);
+        }
+
+        function copyToClipboard(text, label) {
+            navigator.clipboard.writeText(text).then(() => {
+                showAlert(`${label} copied to clipboard!`, 'success');
+            }).catch(err => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showAlert(`${label} copied to clipboard!`, 'success');
+            });
+        }
+
+        function openAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'block';
+        }
+
+        function closeAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'none';
+            document.getElementById('addUserForm').reset();
+        }
+
+        document.getElementById('addUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                username: document.getElementById('newUsername').value,
+                email: document.getElementById('newEmail').value,
+                password: document.getElementById('newPassword').value,
+                role: document.getElementById('newRole').value
+            };
+
+            try {
+                const response = await fetch('/admin/users/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    closeAddUserModal();
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert(result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Error adding user: ' + error.message, 'error');
+            }
+        });
+
+        async function viewUserStats(userId) {
+            try {
+                const response = await fetch(`/admin/users/${userId}/stats`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const user = result.user;
+                    document.getElementById('statsContent').innerHTML = `
+                        <div style="margin-bottom: 20px;">
+                            <p><strong>Username:</strong> ${user.username}</p>
+                            <p><strong>Email:</strong> ${user.email}</p>
+                            <p><strong>Role:</strong> <span class="role-badge role-${user.role}">${user.role.toUpperCase()}</span></p>
+                            <p><strong>Created:</strong> ${user.created_at}</p>
+                            <p><strong>Last Login:</strong> ${user.last_login || 'Never'}</p>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-value">${user.games_played}</div>
+                                <div class="stat-label">Games Played</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${user.wins}</div>
+                                <div class="stat-label">Wins</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${user.losses}</div>
+                                <div class="stat-label">Losses</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${user.draws}</div>
+                                <div class="stat-label">Draws</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${user.win_rate}%</div>
+                                <div class="stat-label">Win Rate</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${user.rating}</div>
+                                <div class="stat-label">Rating</div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('statsModal').style.display = 'block';
+                } else {
+                    showAlert(result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Error loading stats: ' + error.message, 'error');
+            }
+        }
+
+        function closeStatsModal() {
+            document.getElementById('statsModal').style.display = 'none';
+        }
+
+        function openResetPasswordModal(userId, username) {
+            document.getElementById('resetUserId').value = userId;
+            document.getElementById('resetUsername').textContent = username;
+            document.getElementById('resetPasswordModal').style.display = 'block';
+        }
+
+        function closeResetPasswordModal() {
+            document.getElementById('resetPasswordModal').style.display = 'none';
+            document.getElementById('resetPasswordForm').reset();
+        }
+
+        document.getElementById('resetPasswordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userId = document.getElementById('resetUserId').value;
+            const password = document.getElementById('resetPassword').value;
+
+            try {
+                const response = await fetch(`/admin/users/${userId}/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    closeResetPasswordModal();
+                } else {
+                    showAlert(result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Error resetting password: ' + error.message, 'error');
+            }
+        });
+
+        async function deleteUser(userId, username) {
+            if (!confirm(`Are you sure you want to deactivate user "${username}"?`)) return;
+
+            try {
+                const response = await fetch(`/admin/users/${userId}/delete`, { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert(result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Error deleting user: ' + error.message, 'error');
+            }
+        }
+
+        async function activateUser(userId, username) {
+            if (!confirm(`Are you sure you want to activate user "${username}"?`)) return;
+
+            try {
+                const response = await fetch(`/admin/users/${userId}/activate`, { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert(result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Error activating user: ' + error.message, 'error');
+            }
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

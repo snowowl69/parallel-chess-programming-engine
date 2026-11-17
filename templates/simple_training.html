@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Training Monitor</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        .status { padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        .metric { display: inline-block; margin: 10px; padding: 15px; 
+                 background: #f8f9fa; border-radius: 5px; min-width: 150px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Training Monitor</h1>
+        
+        {% if training_active %}
+        <div class="status success">
+            <strong>🔥 Training Active</strong> - AI model is currently being trained
+        </div>
+        {% else %}
+        <div class="status warning">
+            <strong>⏸️ Training Inactive</strong> - No active training detected
+        </div>
+        {% endif %}
+        
+        <h2>📈 Training Metrics</h2>
+        
+        {% if training_info %}
+        <div class="metric">
+            <strong>Stage:</strong><br>{{ training_info.get('stage', 'Unknown') }}
+        </div>
+        <div class="metric">
+            <strong>Epochs:</strong><br>{{ training_info.get('initial_epochs_completed', 0) }}
+        </div>
+        <div class="metric">
+            <strong>Positions Seen:</strong><br>{{ "{:,}".format(training_info.get('total_positions_seen', 0)) }}
+        </div>
+        <div class="metric">
+            <strong>Training Time:</strong><br>{{ "%.1f"|format(training_info.get('total_training_time', 0)) }}s
+        </div>
+        {% endif %}
+        
+        <h2>🎯 Actions</h2>
+        <div class="status info">
+            <p><strong>To start/resume training:</strong></p>
+            <code>python ultimate_launcher.py</code> → Choose option 1
+        </div>
+        
+        <p><a href="/" style="text-decoration: none; padding: 10px 20px; background: #007bff; color: white; border-radius: 5px;">← Back to Home</a></p>
+    </div>
+    
+    <script>
+        // Auto-refresh every 10 seconds
+        setTimeout(function() {
+            location.reload();
+        }, 10000);
+    </script>
+</body>
+</html>

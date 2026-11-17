@@ -1,0 +1,8 @@
+{
+  "training_completed": true,
+  "final_checkpoint": "models/checkpoints\\chess_model_epoch_9_20260630_122539.pth",
+  "total_time": 168048.5672416687,
+  "total_positions": 753029,
+  "best_loss": 1.8956309142153573,
+  "completion_time": "2026-06-30T12:25:39.579452"
+}

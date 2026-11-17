@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Large data files
+*.pgn
+*.pkl
+processed_training_data.pkl
+
+# Model checkpoints (track these with Git LFS or store separately)
+*.pth
+models/checkpoints/*.pth
+
+# Databases
+*.db
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+training_logs/*.log
+
+# Misc
+*.log

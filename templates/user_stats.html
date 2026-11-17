@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ user.username }} - User Statistics</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .stats-dashboard {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .user-profile-header {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            padding: 2rem;
+        }
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: var(--gold-primary);
+            border: 2px solid var(--gold-primary);
+        }
+        .profile-info h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 2.5rem;
+        }
+        .profile-info p {
+            margin: 0.2rem 0;
+            color: var(--text-muted);
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .metric-card {
+            background: var(--bg-panel);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--gold-primary);
+        }
+        .metric-icon {
+            font-size: 2rem;
+            color: var(--teal-action);
+            margin-bottom: 1rem;
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+        .metric-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="nav-container">
+            <div class="logo-section">
+                <div class="logo"><i class="fas fa-chart-bar"></i></div>
+                <div class="nav-title">User Statistics</div>
+            </div>
+            <div class="nav-links">
+                <a href="{{ url_for('manage_users') }}"><i class="fas fa-arrow-left"></i> Back to Users</a>
+                <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container stats-dashboard">
+        <div class="glass-panel user-profile-header">
+            <div class="profile-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="profile-info">
+                <h1>{{ user.username }}</h1>
+                <p><i class="fas fa-envelope"></i> {{ user.email }}</p>
+                <p><i class="fas fa-id-badge"></i> Role: <span class="role-badge role-{{ user.role }}">{{ user.role|upper }}</span></p>
+                <p><i class="fas fa-calendar-alt"></i> Member since: {{ user.created_at[:10] }}</p>
+                <p><i class="fas fa-clock"></i> Last Login: {{ user.last_login[:10] if user.last_login else 'Never' }}</p>
+            </div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fas fa-gamepad"></i></div>
+                <div class="metric-value">{{ user.games_played }}</div>
+                <div class="metric-label">Games Played</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fas fa-trophy"></i></div>
+                <div class="metric-value" style="color: #4ade80;">{{ user.wins }}</div>
+                <div class="metric-label">Wins</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fas fa-times-circle"></i></div>
+                <div class="metric-value" style="color: #f87171;">{{ user.losses }}</div>
+                <div class="metric-label">Losses</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fas fa-handshake"></i></div>
+                <div class="metric-value" style="color: #94a3b8;">{{ user.draws }}</div>
+                <div class="metric-label">Draws</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fas fa-percentage"></i></div>
+                <div class="metric-value">{{ user.win_rate }}%</div>
+                <div class="metric-label">Win Rate</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fas fa-star"></i></div>
+                <div class="metric-value" style="color: var(--gold-primary);">{{ user.rating }}</div>
+                <div class="metric-label">Elo Rating</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

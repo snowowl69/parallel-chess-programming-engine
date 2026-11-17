@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Chess AI Platform</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="header">
+        <div class="nav-container">
+            <div class="logo-section">
+                <span class="logo"><i class="fas fa-chess-knight"></i></span>
+                <span class="nav-title">Chess AI Platform</span>
+            </div>
+            <div class="user-info">
+                <span>Welcome, {{ stats.username }}!</span>
+                <span class="user-role {{ 'admin-role' if stats.role == 'admin' else '' }}">
+                    {{ stats.role.title() }}
+                </span>
+                <a href="{{ url_for('logout') }}" class="btn btn-logout">Logout</a>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="container">
+        <div class="dashboard-title">
+            <h1><i class="fas fa-chart-line"></i> Platform Analytics</h1>
+            <p>Detailed statistics and training metrics</p>
+            <a href="{{ url_for('index') }}" class="btn btn-primary" style="margin-top: 20px; display: inline-block;"><i class="fas fa-arrow-left"></i> Back to Home</a>
+        </div>
+        <div id="analytics-section" class="analytics-section" >
+            <div class="analytics-header">
+                <h2><i class="fas fa-chart-bar"></i> Analytics Dashboard</h2>
+                <p>Real-time platform statistics and training metrics</p>
+            </div>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
+                    <div class="stat-value">{{ analytics.training.total_iterations }}</div>
+                    <div class="stat-label">Training Iterations</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="stat-icon"><i class="fas fa-gamepad"></i></div>
+                    <div class="stat-value">{{ analytics.training.total_games|default(0)|int }}</div>
+                    <div class="stat-label">Total Games Played</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="stat-value">{{ "%.3f"|format(analytics.training.best_loss|default(0)) }}</div>
+                    <div class="stat-label">Best Loss Achieved</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="stat-icon"><i class="fas fa-stopwatch"></i></div>
+                    <div class="stat-value">{{ "%.1f"|format(analytics.training.total_time_hours|default(0)) }}h</div>
+                    <div class="stat-label">Total Training Time</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="stat-value">{{ analytics.users.total|default(0) }}</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+                    <div class="stat-value">{{ analytics.users.avg_rating|default(1200)|round|int }}</div>
+                    <div class="stat-label">Average Rating</div>
+                </div>
+            </div>
+            
+            <div class="charts-section">
+                <div class="glass-panel chart-container">
+                    <h3 class="chart-title">Training Progress</h3>
+                    <canvas id="lossChart"></canvas>
+                </div>
+                
+                <div class="glass-panel chart-container">
+                    <h3 class="chart-title">Games per Iteration</h3>
+                    <canvas id="gamesChart"></canvas>
+                </div>
+            </div>
+            
+            {% if analytics.metrics %}
+            <div class="glass-panel metrics-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Iteration</th>
+                            <th>Games</th>
+                            <th>Total Loss</th>
+                            <th>Value Loss</th>
+                            <th>Policy Loss</th>
+                            <th>Avg Game Length</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for metric in analytics.metrics %}
+                        <tr>
+                            <td>{{ metric.iteration }}</td>
+                            <td>{{ metric.games_played }}</td>
+                            <td>{{ "%.4f"|format(metric.total_loss) }}</td>
+                            <td>{{ "%.4f"|format(metric.value_loss) }}</td>
+                            <td>{{ "%.4f"|format(metric.policy_loss) }}</td>
+                            <td>{{ "%.1f"|format(metric.average_game_length) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        {% if stats.role == 'admin' %}
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = 'rgba(255,255,255,0.1)';
+        // Training Loss Chart
+        const lossCtx = document.getElementById('lossChart').getContext('2d');
+        const lossData = {
+            labels: [{% for m in analytics.metrics %}'{{ m.iteration }}',{% endfor %}],
+            datasets: [{
+                label: 'Total Loss',
+                data: [{% for m in analytics.metrics %}{{ m.total_loss }},{% endfor %}],
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.4
+            }, {
+                label: 'Value Loss',
+                data: [{% for m in analytics.metrics %}{{ m.value_loss }},{% endfor %}],
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                tension: 0.4
+            }, {
+                label: 'Policy Loss',
+                data: [{% for m in analytics.metrics %}{{ m.policy_loss }},{% endfor %}],
+                borderColor: 'rgb(255, 205, 86)',
+                backgroundColor: 'rgba(255, 205, 86, 0.2)',
+                tension: 0.4
+            }]
+        };
+        
+        new Chart(lossCtx, {
+            type: 'line',
+            data: lossData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: { color: 'white' }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: { color: 'white' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    },
+                    x: {
+                        ticks: { color: 'white' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    }
+                }
+            }
+        });
+        
+        // Games Chart
+        const gamesCtx = document.getElementById('gamesChart').getContext('2d');
+        const gamesData = {
+            labels: [{% for m in analytics.metrics %}'{{ m.iteration }}',{% endfor %}],
+            datasets: [{
+                label: 'Games Played',
+                data: [{% for m in analytics.metrics %}{{ m.games_played }},{% endfor %}],
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgb(54, 162, 235)',
+                borderWidth: 2
+            }]
+        };
+        
+        new Chart(gamesCtx, {
+            type: 'bar',
+            data: gamesData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: { color: 'white' }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: { color: 'white' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    },
+                    x: {
+                        ticks: { color: 'white' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    }
+                }
+            }
+        });
+        {% endif %}
+    </script>
+
+    </script>
+</body>
+</html>

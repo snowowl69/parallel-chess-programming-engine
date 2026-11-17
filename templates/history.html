@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game History - Chess AI Platform</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="header">
+        <div class="nav-container">
+            <div class="logo-section">
+                <span class="logo"><i class="fas fa-chess-knight"></i></span>
+                <span class="nav-title">Chess AI Platform</span>
+            </div>
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-btn"><i class="fas fa-chart-bar"></i> Dashboard</a>
+                <a href="/playing" class="nav-btn"><i class="fas fa-chess"></i> Play</a>
+                <a href="/logout" class="nav-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="page-header">
+            <h1><i class="fas fa-book"></i> Your Game History</h1>
+            <p>Review your past matches against the AI</p>
+        </div>
+
+        <div class="glass-panel history-table-container">
+            <div id="loading" class="loading">Loading your game history...</div>
+            <div id="no-games" class="no-games">
+                <span class="empty-icon"><i class="fas fa-box-open"></i></span>
+                No games found. Time to play your first match!
+            </div>
+            <table id="history-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Opponent</th>
+                        <th>Difficulty</th>
+                        <th>Duration</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body">
+                    <!-- Rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/game_history')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loading').style.display = 'none';
+                    
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+                    
+                    if (!data.games || data.games.length === 0) {
+                        document.getElementById('no-games').style.display = 'block';
+                        return;
+                    }
+                    
+                    const tbody = document.getElementById('history-body');
+                    const table = document.getElementById('history-table');
+                    
+                    data.games.forEach(game => {
+                        const row = document.createElement('tr');
+                        
+                        // Format date
+                        const date = new Date(game.created_at);
+                        const dateStr = date.toLocaleString(undefined, { 
+                            year: 'numeric', month: 'short', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                        
+                        // Format duration
+                        const minutes = Math.floor((game.duration || 0) / 60);
+                        const seconds = (game.duration || 0) % 60;
+                        const durationStr = `${minutes}m ${seconds}s`;
+                        
+                        // Determine result badge class
+                        let badgeClass = '';
+                        let resultText = game.result;
+                        if (game.result === '1-0' || game.result === '0-1') {
+                            badgeClass = 'badge badge-success'; 
+                        } else if (game.result === '1/2-1/2') {
+                            badgeClass = 'badge badge-warning';
+                            resultText = 'Draw';
+                        } else {
+                            badgeClass = 'badge badge-success'; // default
+                        }
+                        
+                        row.innerHTML = `
+                            <td>${dateStr}</td>
+                            <td style="text-transform: uppercase;">${game.game_type === 'vs_ai' ? 'AI' : game.game_type.replace('_', ' ')}</td>
+                            <td style="text-transform: capitalize;">${game.difficulty || 'Medium'}</td>
+                            <td>${durationStr}</td>
+                            <td><span class="${badgeClass}">${resultText}</span></td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                    
+                    table.style.display = 'table';
+                })
+                .catch(error => {
+                    console.error('Error fetching history:', error);
+                    document.getElementById('loading').textContent = 'Error loading history. Please try again later.';
+                });
+        });
+    </script>
+</body>
+</html>

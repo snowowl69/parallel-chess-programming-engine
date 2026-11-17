@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Chess AI Platform</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="header">
+        <div class="nav-container">
+            <div class="logo-section">
+                <span class="logo"><i class="fas fa-chess-knight"></i></span>
+                <span class="nav-title">Chess AI Platform</span>
+            </div>
+            <div class="user-info">
+                <span>Welcome, {{ stats.username }}!</span>
+                <span class="user-role {{ 'admin-role' if stats.role == 'admin' else '' }}">
+                    {{ stats.role.title() }}
+                </span>
+                <a href="{{ url_for('logout') }}" class="btn btn-logout">Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="dashboard-title">
+            {% if stats.role == 'admin' %}
+            <h1><i class="fas fa-cogs"></i> Admin Dashboard</h1>
+            <p>Manage AI training, monitor users, and control the chess platform</p>
+            {% else %}
+            <h1><i class="fas fa-trophy"></i> Your Chess Dashboard</h1>
+            <p>Play chess against AI and improve your skills</p>
+            {% endif %}
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="mode-selection">
+            {% if stats.role == 'admin' %}
+            <!-- Admin Training Mode -->
+            <div class="glass-panel mode-card" onclick="goToTraining()">
+                <span class="mode-icon"><i class="fas fa-brain"></i></span>
+                <h2 class="mode-title">AI Training Control</h2>
+                <p class="mode-description">
+                    Train AlphaZero-style neural networks using self-play reinforcement learning. 
+                    Upload datasets, monitor progress, and develop powerful chess AI models.
+                </p>
+                <button class="mode-btn btn-training">
+                    <i class="fas fa-rocket"></i> Manage Training
+                </button>
+            </div>
+
+            <!-- Admin Playing Mode -->
+            <div class="glass-panel mode-card" onclick="goToPlaying()">
+                <span class="mode-icon"><i class="fas fa-chess"></i></span>
+                <h2 class="mode-title">Test AI Models</h2>
+                <p class="mode-description">
+                    Test trained AI models, play against different versions, 
+                    and evaluate model performance. All games contribute to training data.
+                </p>
+                <button class="mode-btn btn-playing">
+                    <i class="fas fa-gamepad"></i> Test & Play
+                </button>
+            </div>
+
+            <!-- Admin Analytics -->
+            <div class="glass-panel mode-card" onclick="showAnalytics()">
+                <span class="mode-icon"><i class="fas fa-chart-line"></i></span>
+                <h2 class="mode-title">Platform Analytics</h2>
+                <p class="mode-description">
+                    Monitor user activity, training progress, model performance,
+                    and platform statistics. Manage users and system resources.
+                </p>
+                <button class="mode-btn btn-analytics">
+                    <i class="fas fa-chart-bar"></i> View Analytics
+                </button>
+            </div>
+            {% else %}
+            <!-- User Playing Mode -->
+            <div class="glass-panel mode-card" onclick="goToPlaying()">
+                <span class="mode-icon"><i class="fas fa-chess"></i></span>
+                <h2 class="mode-title">Play Chess</h2>
+                <p class="mode-description">
+                    Play chess games against trained AI with multiple difficulty levels.
+                    Your games help improve the AI through continuous learning.
+                </p>
+                <button class="mode-btn btn-playing">
+                    <i class="fas fa-gamepad"></i> Start Playing
+                </button>
+            </div>
+
+            <!-- User Game History -->
+            <div class="glass-panel mode-card" onclick="showGameHistory()">
+                <span class="mode-icon"><i class="fas fa-book"></i></span>
+                <h2 class="mode-title">Game History</h2>
+                <p class="mode-description">
+                    Review your past games, analyze your performance,
+                    and track your improvement over time.
+                </p>
+                <button class="mode-btn btn-history">
+                    <i class="fas fa-clipboard-list"></i> View History
+                </button>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Statistics Section -->
+        {% if stats.role != 'admin' %}
+        <div class="glass-panel stats-section">
+            <h3 class="stats-title"><i class="fas fa-chart-bar"></i> Your Statistics</h3>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="stat-value">{{ stats.games_played }}</div>
+                    <div class="stat-label">Games Played</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="stat-value">{{ stats.wins }}</div>
+                    <div class="stat-label">Wins</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="stat-value">{{ stats.losses }}</div>
+                    <div class="stat-label">Losses</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="stat-value">{{ stats.draws }}</div>
+                    <div class="stat-label">Draws</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="stat-value">{{ ((stats.wins / (stats.games_played if stats.games_played > 0 else 1)) * 100)|round(1) }}%</div>
+                    <div class="stat-label">Win Rate</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // Initialize Socket.IO connection
+        const socket = io();
+
+        // Navigation functions
+        function goToTraining() {
+            window.location.href = '{{ url_for("training") }}';
+        }
+
+        function goToPlaying() {
+            window.location.href = '{{ url_for("playing") }}';
+        }
+
+        function showAnalytics() {
+            window.location.href = '{{ url_for("analytics") }}';
+        }
+
+        function showGameHistory() {
+            window.location.href = '{{ url_for("history") }}';
+        }
+
+        // Socket event handlers
+        socket.on('connect', function() {
+            console.log('Connected to chess AI platform');
+        });
+
+        // Load initial training status
+        fetch('/training_status')
+            .then(response => response.json())
+            .then(data => {
+                updateTrainingStatus(data.is_training);
+            })
+            .catch(error => {
+                console.log('Error loading training status:', error);
+            });
+
+        function updateTrainingStatus(isTraining) {
+            const statusElements = document.querySelectorAll('.training-status');
+            statusElements.forEach(element => {
+                if (isTraining) {
+                    element.textContent = 'AI Training in Progress';
+                    element.className = 'training-status badge badge-success';
+                } else {
+                    element.textContent = 'Ready to Train';
+                    element.className = 'training-status badge';
+                }
+            });
+        }
+
+        // Listen for training updates
+        socket.on('training_started', function(data) {
+            updateTrainingStatus(true);
+        });
+
+        socket.on('training_stopped', function(data) {
+            updateTrainingStatus(false);
+        });
+
+        socket.on('training_completed', function(data) {
+            updateTrainingStatus(false);
+        });
+
+</body>
+</html>

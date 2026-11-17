@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chess Game</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        .board { width: 400px; height: 400px; margin: 20px auto; border: 2px solid #333; }
+        .status { padding: 10px; margin: 10px 0; background: #e9ecef; border-radius: 5px; }
+        .button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; 
+                 border: none; border-radius: 5px; cursor: pointer; }
+        .button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>♟️ Chess Game</h1>
+        
+        <div class="status">
+            <strong>Current Player:</strong> <span id="current-player">White</span><br>
+            <strong>Moves Played:</strong> <span id="move-count">0</span>
+        </div>
+        
+        <div class="board">
+            <p style="text-align: center; margin-top: 180px;">
+                🏁 Chess Board Interface<br>
+                <small>(Full chess implementation coming soon)</small>
+            </p>
+        </div>
+        
+        <div style="text-align: center;">
+            <button class="button" onclick="makeMove()">Make Random Move</button>
+            <button class="button" onclick="resetGame()">Reset Game</button>
+            <a href="/" class="button" style="text-decoration: none;">Back to Home</a>
+        </div>
+        
+        <div class="status">
+            <strong>Note:</strong> For full chess gameplay, use the desktop version:<br>
+            <code>python chess_game.py</code>
+        </div>
+    </div>
+    
+    <script>
+        function makeMove() {
+            fetch('/api/make_move', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({move: 'e2e4'})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    document.getElementById('move-count').textContent = data.game_state.moves.length;
+                    document.getElementById('current-player').textContent = 
+                        data.game_state.current_player.charAt(0).toUpperCase() + 
+                        data.game_state.current_player.slice(1);
+                }
+            });
+        }
+        
+        function resetGame() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>

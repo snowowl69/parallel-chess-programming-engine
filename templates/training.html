@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess AI Platform - Training Mode</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="header">
+        <div class="nav-container">
+            <div class="logo-section">
+                <span class="logo"><i class="fas fa-brain"></i></span>
+                <span class="nav-title">Training Mode</span>
+            </div>
+            <div class="nav-links">
+                <a href="{{ url_for('index') }}"><i class="fas fa-home"></i> Dashboard</a>
+                <a href="{{ url_for('playing') }}"><i class="fas fa-chess"></i> Playing</a>
+                <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="dashboard-title">
+            <h1><i class="fas fa-rocket"></i> AI Training Center</h1>
+            <p>Train AlphaZero-style neural networks with self-play reinforcement learning</p>
+        </div>
+
+        <div class="dashboard">
+            <!-- Training Controls -->
+            <div class="glass-panel training-controls">
+                <h3><i class="fas fa-bullseye"></i> Training Controls</h3>
+                
+                <div class="status-indicator">
+                    <div class="status-dot" id="status-dot"></div>
+                    <span id="training-status">Training Stopped</span>
+                </div>
+
+                <form id="training-form">
+                    <div class="form-group">
+                        <label for="iterations">Training Iterations:</label>
+                        <input type="number" id="iterations" name="iterations" value="10" min="1" max="1000">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="games_per_iteration">Games per Iteration:</label>
+                        <input type="number" id="games_per_iteration" name="games_per_iteration" value="5" min="1" max="50">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mcts_simulations">MCTS Simulations:</label>
+                        <input type="number" id="mcts_simulations" name="mcts_simulations" value="400" min="100" max="2000">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="start-btn">
+                        <i class="fas fa-play"></i> Start Training
+                    </button>
+                    <button type="button" class="btn btn-danger" id="stop-btn" disabled>
+                        <i class="fas fa-stop"></i> Stop Training
+                    </button>
+                </form>
+            </div>
+
+            <!-- Training Metrics -->
+            <div class="glass-panel">
+                <h3><i class="fas fa-chart-bar"></i> Training Metrics</h3>
+                
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="current-iteration">0</div>
+                        <div class="metric-label">Current Iteration</div>
+                    </div>
+                    
+                    <div class="metric">
+                        <div class="metric-value" id="total-games">0</div>
+                        <div class="metric-label">Total Games</div>
+                    </div>
+                    
+                    <div class="metric">
+                        <div class="metric-value" id="current-loss">0.00</div>
+                        <div class="metric-label">Current Loss</div>
+                    </div>
+                    
+                    <div class="metric">
+                        <div class="metric-value" id="model-elo">1500</div>
+                        <div class="metric-label">Model ELO</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dataset Upload -->
+            <div class="glass-panel">
+                <h3><i class="fas fa-folder-open"></i> Dataset Management</h3>
+                
+                <form action="/upload_dataset" method="post" enctype="multipart/form-data">
+                    <div class="dataset-upload" onclick="document.getElementById('dataset-file').click()">
+                        <input type="file" id="dataset-file" name="dataset" accept=".pgn">
+                        <p><i class="fas fa-file-alt"></i> Click to upload Lichess PGN dataset</p>
+                        <p style="font-size: 0.9em; opacity: 0.7;">Supported formats: .pgn</p>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 15px;">
+                        <i class="fas fa-upload"></i> Upload Dataset
+                    </button>
+                </form>
+            </div>
+
+            <!-- Training Log -->
+            <div class="glass-panel">
+                <h3><i class="fas fa-clipboard-list"></i> Training Log</h3>
+                <div class="log-container" id="training-log" style="background: #000; color: #0f0; font-family: monospace; padding: 15px; border-radius: 8px; overflow-y: auto; height: 300px;">
+                    <div class="log-entry">
+                        <span class="log-timestamp">[--:--:--]</span>
+                        <span>Ready to start training...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Training Progress Chart -->
+        <div class="glass-panel">
+            <h3><i class="fas fa-chart-line"></i> Training Progress</h3>
+            <div class="chart-container">
+                <canvas id="progress-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Socket.IO connection
+        const socket = io();
+        
+        // Chart setup
+        const ctx = document.getElementById('progress-chart').getContext('2d');
+        const progressChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Training Loss',
+                    data: [],
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#ffffff'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#ffffff'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#ffffff'
+                        }
+                    }
+                }
+            }
+        });
+
+        // DOM elements
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const statusDot = document.getElementById('status-dot');
+        const trainingStatus = document.getElementById('training-status');
+        const trainingLog = document.getElementById('training-log');
+        const trainingForm = document.getElementById('training-form');
+
+        // Training form submission
+        trainingForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(trainingForm);
+            
+            fetch('/start_training', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateTrainingState(true);
+                    addLogEntry('Training started successfully!');
+                } else {
+                    addLogEntry(`Error: ${data.error}`, 'error');
+                }
+            })
+            .catch(error => {
+                addLogEntry(`Error: ${error.message}`, 'error');
+            });
+        });
+
+        // Stop training
+        stopBtn.addEventListener('click', function() {
+            fetch('/stop_training', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateTrainingState(false);
+                    addLogEntry('Training stopped by user');
+                } else {
+                    addLogEntry(`Error: ${data.error}`, 'error');
+                }
+            })
+            .catch(error => {
+                addLogEntry(`Error: ${error.message}`, 'error');
+            });
+        });
+
+        // Socket event handlers
+        socket.on('connect', function() {
+            addLogEntry('Connected to training monitor');
+        });
+
+        socket.on('training_started', function(data) {
+            updateTrainingState(true);
+            addLogEntry(data.message);
+        });
+
+        socket.on('training_stopped', function(data) {
+            updateTrainingState(false);
+            addLogEntry(data.message);
+        });
+
+        socket.on('training_progress', function(data) {
+            addLogEntry(data.message);
+            
+            if (data.iteration) {
+                document.getElementById('current-iteration').textContent = data.iteration;
+            }
+            if (data.total_games) {
+                document.getElementById('total-games').textContent = data.total_games;
+            }
+            if (data.loss) {
+                document.getElementById('current-loss').textContent = data.loss.toFixed(4);
+                
+                const labels = progressChart.data.labels;
+                const lossData = progressChart.data.datasets[0].data;
+                
+                labels.push(labels.length + 1);
+                lossData.push(data.loss);
+                
+                if (labels.length > 20) {
+                    labels.shift();
+                    lossData.shift();
+                }
+                
+                progressChart.update();
+            }
+        });
+
+        // Helper functions
+        function updateTrainingState(isTraining) {
+            if (isTraining) {
+                statusDot.className = 'status-dot status-running';
+                trainingStatus.textContent = 'Training Running';
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+            } else {
+                statusDot.className = 'status-dot status-stopped';
+                trainingStatus.textContent = 'Training Stopped';
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        }
+
+        function addLogEntry(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let color = '#ffffff';
+            if (type === 'error') color = '#dc3545';
+            if (type === 'success') color = '#28a745';
+            
+            logEntry.innerHTML = `
+                <span class="log-timestamp">[${timestamp}]</span>
+                <span style="color: ${color}">${message}</span>
+            `;
+            
+            trainingLog.appendChild(logEntry);
+            trainingLog.scrollTop = trainingLog.scrollHeight;
+        }
+
+        // File upload display
+        document.getElementById('dataset-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.querySelector('.dataset-upload p').textContent = `Selected: ${file.name}`;
+            }
+        });
+
+        // Load initial status
+        fetch('/training_status')
+            .then(response => response.json())
+            .then(data => {
+                updateTrainingState(data.is_training);
+                
+                document.getElementById('current-iteration').textContent = data.current_iteration || 0;
+                document.getElementById('total-games').textContent = data.total_games || 0;
+                document.getElementById('current-loss').textContent = (data.current_loss || 0).toFixed(4);
+                document.getElementById('model-elo').textContent = data.best_model_elo || 1500;
+            })
+            .catch(error => {
+                addLogEntry(`Error loading status: ${error.message}`, 'error');
+            });
+    </script>
+</body>
+</html>

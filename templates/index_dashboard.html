@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess AI Platform - Home</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="header">
+        <div class="nav-container">
+            <div class="logo-section">
+                <span class="logo"><i class="fas fa-chess-knight"></i></span>
+                <span class="nav-title">Chess AI Platform</span>
+            </div>
+            <div class="user-info">
+                <span>Welcome, {{ stats.username }}!</span>
+                <span class="user-role {{ 'admin-role' if stats.role == 'admin' else '' }}">
+                    {{ stats.role.title() }}
+                </span>
+                <a href="{{ url_for('logout') }}" class="btn btn-logout">Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="dashboard-title">
+            {% if stats.role == 'admin' %}
+            <h1><i class="fas fa-cogs"></i> Admin Dashboard</h1>
+            <p>Manage AI training, monitor users, and control the chess platform</p>
+            {% else %}
+            <h1><i class="fas fa-trophy"></i> Your Chess Dashboard</h1>
+            <p>Play chess against AI and improve your skills</p>
+            {% endif %}
+        </div>
+
+        <div class="mode-selection">
+            {% if stats.role == 'admin' %}
+            <!-- Admin Training Mode -->
+            <div class="glass-panel mode-card" onclick="window.location.href='{{ url_for('training') }}'">
+                <span class="mode-icon"><i class="fas fa-brain"></i></span>
+                <h2 class="mode-title">AI Training Control</h2>
+                <p class="mode-description">
+                    Train AlphaZero-style neural networks using self-play reinforcement learning. 
+                    Upload datasets, monitor progress, and develop powerful chess AI models.
+                </p>
+                <button class="mode-btn btn-training">
+                    <i class="fas fa-rocket"></i> Manage Training
+                </button>
+            </div>
+
+            <!-- Admin Playing Mode -->
+            <div class="glass-panel mode-card" onclick="window.location.href='{{ url_for('playing') }}'">
+                <span class="mode-icon"><i class="fas fa-chess"></i></span>
+                <h2 class="mode-title">Test AI Models</h2>
+                <p class="mode-description">
+                    Test trained AI models, play against different versions, 
+                    and evaluate model performance. All games contribute to training data.
+                </p>
+                <button class="mode-btn btn-playing">
+                    <i class="fas fa-gamepad"></i> Test & Play
+                </button>
+            </div>
+
+            <!-- Analytics Dashboard -->
+            <div class="glass-panel mode-card" onclick="window.location.href='{{ url_for('analytics') }}'">
+                <span class="mode-icon"><i class="fas fa-chart-line"></i></span>
+                <h2 class="mode-title">Platform Analytics</h2>
+                <p class="mode-description">
+                    Monitor user activity, training progress, model performance, 
+                    and platform statistics. Manage users and system resources.
+                </p>
+                <button class="mode-btn btn-analytics">
+                    <i class="fas fa-chart-bar"></i> View Analytics
+                </button>
+            </div>
+
+            <!-- User Management -->
+            <div class="glass-panel mode-card" onclick="window.location.href='{{ url_for('manage_users') }}'">
+                <span class="mode-icon"><i class="fas fa-users"></i></span>
+                <h2 class="mode-title">User Management</h2>
+                <p class="mode-description">
+                    View all users, manage accounts, reset passwords, and control user access. 
+                    View detailed statistics for each user.
+                </p>
+                <button class="mode-btn btn-analytics">
+                    <i class="fas fa-users"></i> Manage Users
+                </button>
+            </div>
+            {% else %}
+            <!-- User Playing Mode -->
+            <div class="glass-panel mode-card" onclick="window.location.href='{{ url_for('playing') }}'">
+                <span class="mode-icon"><i class="fas fa-chess-pawn"></i></span>
+                <h2 class="mode-title">Play Chess</h2>
+                <p class="mode-description">
+                    Challenge our AI opponent and test your chess skills. 
+                    Choose your difficulty level and start playing now!
+                </p>
+                <button class="mode-btn btn-playing">
+                    <i class="fas fa-gamepad"></i> Start Playing
+                </button>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Statistics Section -->
+        {% if stats.role != 'admin' %}
+        <div class="glass-panel stats-section">
+            <h3 class="stats-title"><i class="fas fa-chart-bar"></i> Your Statistics</h3>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="stat-value">{{ stats.games_played }}</div>
+                    <div class="stat-label">Games Played</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="stat-value">{{ stats.wins }}</div>
+                    <div class="stat-label">Wins</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="stat-value">{{ stats.losses }}</div>
+                    <div class="stat-label">Losses</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="stat-value">{{ stats.draws }}</div>
+                    <div class="stat-label">Draws</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="stat-value">{{ ((stats.wins / (stats.games_played if stats.games_played > 0 else 1)) * 100)|round(1) }}%</div>
+                    <div class="stat-label">Win Rate</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="stat-value">{{ stats.rating }}</div>
+                    <div class="stat-label">Rating</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
